@@ -38,6 +38,21 @@ def scrape_data():
     data = request.json
     url = data['url']
     name = data['name']
+
+    file_path = f"data/{name}_data.json"
+    links_path = f"data/{name}_filtered_links.txt"
+
+    # Check if the file exists before attempting to remove it
+    if os.path.exists(file_path):
+        # Remove the file
+        os.remove(file_path)
+        print(f"The file {file_path} has been removed.")  
+
+    if os.path.exists(links_path):
+        # Remove the file
+        os.remove(links_path)
+        print(f"The file {links_path} has been removed.")
+
     thread = threading.Thread(target=web_scrape.for_new_data, args=(url,name,))
     thread.start()
 
@@ -45,6 +60,20 @@ def scrape_data():
 
 
     return jsonify(message=msg)
+
+
+# this api will scrape all the content of the given url only and append it to data.
+@app.route("/scrape_one_page", methods=["POST"])
+def scrape_1data():
+    data = request.json
+    url = data['url']
+    name = data['name']
+
+    data = web_scrape.scrape_page(url,name)
+
+    json_data = [vars(doc) for doc in data]
+
+    return jsonify(json_data)
 
 
 
@@ -63,7 +92,7 @@ def load():
     
     else:
         json_data = "data is being scraped wait few minutes..."
-
+ 
     # print( json_data[0][0]['page_content'] )
     
 
