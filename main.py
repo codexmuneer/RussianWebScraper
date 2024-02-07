@@ -14,12 +14,41 @@ def home():
     return "Hello, this is the home route!"
 
 
+# this api will return urls which failed during scraping process
+@app.route("/fail_urls", methods=["POST"])
+def failed_urls():
+    data = request.json
+    name = data['name']
+
+    fail_urls_path = f"data/{name}_failed_links.txt"
+
+    if os.path.exists(fail_urls_path):
+        with open(fail_urls_path, 'r') as file:
+            file_contents_str = file.read()
+        urls = list(filter(None, file_contents_str.split()))
+
+    else:
+        urls = "failed urls does not exist."
+
+    response = jsonify(urls)
+
+    return response
+
+
+
 # this api will scrape only new links data and concatetenate inside old data 
 @app.route("/update", methods=["POST"])
 def update_data():
     data = request.json
     url = data['url']
     name = data['name']
+
+    fail_urls_path = f"data/{name}_failed_links.txt"
+
+    if os.path.exists(fail_urls_path):
+        # Remove the file
+        os.remove(fail_urls_path)
+        print(f"The file {fail_urls_path} has been removed.")
 
 
     thread = threading.Thread(target=web_scrape.for_updating_data, args=(url,name,))
@@ -41,6 +70,7 @@ def scrape_data():
 
     file_path = f"data/{name}_data.json"
     links_path = f"data/{name}_filtered_links.txt"
+    fail_urls_path = f"data/{name}_failed_links.txt"
 
     # Check if the file exists before attempting to remove it
     if os.path.exists(file_path):
@@ -52,6 +82,11 @@ def scrape_data():
         # Remove the file
         os.remove(links_path)
         print(f"The file {links_path} has been removed.")
+
+    if os.path.exists(fail_urls_path):
+        # Remove the file
+        os.remove(fail_urls_path)
+        print(f"The file {fail_urls_path} has been removed.")
 
     thread = threading.Thread(target=web_scrape.for_new_data, args=(url,name,))
     thread.start()
@@ -71,7 +106,10 @@ def scrape_1data():
 
     data = web_scrape.scrape_page(url,name)
 
-    json_data = [vars(doc) for doc in data]
+    if data == "failed to scrape url":
+        json_data = data
+    else:
+        json_data = [vars(doc) for doc in data]
 
     return jsonify(json_data)
 
